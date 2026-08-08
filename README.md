@@ -34,7 +34,7 @@ One-line installer for [Marzban](https://github.com/Gozargah/Marzban) with SSL, 
 ## Quick Start
 
 ```bash
-bash <(curl -sL https://raw.githubusercontent.com/YOUR_USER/marzban-one-line-setup/main/marzban-one-line-setup.sh)
+bash <(curl -sL https://raw.githubusercontent.com/aungpaingsoedev/marzban-one-line-setup/main/marzban-one-line-setup.sh)
 ```
 
 Or run locally:
