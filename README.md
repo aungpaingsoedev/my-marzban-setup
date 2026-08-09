@@ -6,7 +6,7 @@ One-line installer for [Marzban](https://github.com/Gozargah/Marzban) with SSL, 
 
 - Installs Marzban automatically
 - Issues SSL certificate via ESSL
-- Configures `.env` (dashboard TLS, Telegram, subscription, PostgreSQL)
+- Configures `.env` (dashboard TLS, Telegram, subscription)
 - Custom subscription page template
 - Creates admin user
 - Generates Reality keys and writes `xray_config.json`
@@ -29,7 +29,6 @@ One-line installer for [Marzban](https://github.com/Gozargah/Marzban) with SSL, 
 - Ubuntu / Debian VPS
 - Root (or `sudo`) access
 - Domain pointed to the server IP
-- PostgreSQL server (reachable from the VPS)
 - Telegram Bot Token & Admin ID (optional but prompted)
 
 ## Quick Start
@@ -54,11 +53,6 @@ sudo ./marzban-one-line-setup.sh
 5. Subscription title
 6. Admin username
 7. Admin password
-8. PostgreSQL host/IP
-9. PostgreSQL port (default `5432`)
-10. PostgreSQL database name (default `marzban`)
-11. PostgreSQL username
-12. PostgreSQL password
 
 ## After install
 
@@ -66,7 +60,6 @@ sudo ./marzban-one-line-setup.sh
 - **Config file:** `/var/lib/marzban/xray_config.json`
 - **Env file:** `/opt/marzban/.env`
 - **SSL certs:** `/var/lib/marzban/certs/YOUR_DOMAIN/`
-- **Database URL:** set as `SQLALCHEMY_DATABASE_URL` in `.env`
 
 Restart Marzban anytime:
 
@@ -77,6 +70,5 @@ marzban restart
 ## Notes
 
 - Port **443** is used by VLESS Reality; open the listed ports in your firewall.
-- Create the PostgreSQL database and user before running the script.
 - Reality short ID and keys are generated on each run.
 - Re-running the script will overwrite `xray_config.json` with a fresh config.

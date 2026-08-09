@@ -23,7 +23,7 @@ echo "--------------------------------------------------"
 
 # Necessary Package Check
 echo "📦 Checking necessary packages..."
-sudo apt update && sudo apt install -y curl socat wget sed unzip python3
+sudo apt update && sudo apt install -y curl socat wget sed unzip
 
 # Inputs
 read -p "Enter Domain Name (e.g., mar.example.com): " DOMAIN
@@ -33,18 +33,6 @@ read -p "Enter Telegram Admin ID: " ADMIN_ID
 read -p "Enter Subscription Title: " SUB_TITLE
 read -p "Create Admin Username: " ADMIN_USER
 read -s -p "Create Admin Password: " ADMIN_PASS
-echo ""
-
-# PostgreSQL Database
-echo "--------------------------------------------------"
-echo -e "\e[1;33m  PostgreSQL Database Settings:\e[0m"
-read -p "Enter Database IP/Host: " DB_HOST
-read -p "Enter Database Port [5432]: " DB_PORT
-DB_PORT="${DB_PORT:-5432}"
-read -p "Enter Database Name [marzban]: " DB_NAME
-DB_NAME="${DB_NAME:-marzban}"
-read -p "Enter Database Username: " DB_USER
-read -s -p "Enter Database Password: " DB_PASS
 echo -e "\n--------------------------------------------------"
 
 echo "🚀 Installing Marzban..."
@@ -71,16 +59,10 @@ update_env() {
 }
 
 echo "📝 Updating .env configuration..."
-
-# URL-encode DB password for connection string
-DB_PASS_ENC=$(printf '%s' "$DB_PASS" | python3 -c "import sys, urllib.parse; print(urllib.parse.quote(sys.stdin.read(), safe=''))")
-DB_URL="postgresql+psycopg2://${DB_USER}:${DB_PASS_ENC}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
-
 update_env "UVICORN_HOST" "0.0.0.0"
 update_env "UVICORN_PORT" "8000"
 update_env "UVICORN_SSL_CERTFILE" "/var/lib/marzban/certs/$DOMAIN/fullchain.pem"
 update_env "UVICORN_SSL_KEYFILE" "/var/lib/marzban/certs/$DOMAIN/privkey.pem"
-update_env "SQLALCHEMY_DATABASE_URL" "$DB_URL"
 update_env "TELEGRAM_API_TOKEN" "$BOT_TOKEN"
 update_env "TELEGRAM_ADMIN_ID" "$ADMIN_ID"
 update_env "SUB_PROFILE_TITLE" "$SUB_TITLE"
