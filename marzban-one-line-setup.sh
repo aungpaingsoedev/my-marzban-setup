@@ -70,13 +70,28 @@ ok "Dependencies ready."
 section "2 / 6  Configuration"
 echo -e "  ${DIM}Enter the details below to continue.${RESET}"
 echo ""
-ask "Domain name (e.g. mar.example.com)" DOMAIN
+ask "Domain name (e.g. singapore1.pixel4u.site)" DOMAIN
 ask "Email for SSL certificate" EMAIL
 ask "Telegram bot token" BOT_TOKEN
 ask "Telegram admin ID" ADMIN_ID
 ask "Subscription title" SUB_TITLE
 ask "Admin username" ADMIN_USER
 ask "Admin password" ADMIN_PASS 1
+
+DOMAIN=$(echo "$DOMAIN" | xargs)
+EMAIL=$(echo "$EMAIL" | xargs)
+
+if [[ ! "$DOMAIN" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+    fail "Invalid domain: '${DOMAIN}'"
+    fail "Use a domain like singapore1.pixel4u.site (do not use @ / email)."
+    exit 1
+fi
+
+if [[ ! "$EMAIL" =~ ^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$ ]]; then
+    fail "Invalid email: '${EMAIL}'"
+    exit 1
+fi
+
 ok "Inputs saved."
 
 # --- Marzban Install ---
@@ -85,9 +100,24 @@ step "Installing Marzban..."
 sudo bash -c "$(curl -sL https://github.com/Gozargah/Marzban-scripts/raw/master/marzban.sh)" @ install
 ok "Marzban installed."
 
+CERT_DIR="/var/lib/marzban/certs/${DOMAIN}"
+CERT_FILE="${CERT_DIR}/fullchain.pem"
+KEY_FILE="${CERT_DIR}/privkey.pem"
+
 step "Issuing SSL certificate for ${BOLD}${DOMAIN}${RESET}..."
 sudo bash -c "$(curl -sL https://raw.githubusercontent.com/erfjab/ESSL/master/essl.sh)" @ --install
-sudo essl "$EMAIL" "$DOMAIN" marzban
+if ! sudo essl "$EMAIL" "$DOMAIN" marzban; then
+    fail "SSL certificate failed for ${DOMAIN}."
+    fail "Check DNS A record points to this server, then try again."
+    exit 1
+fi
+
+if [ ! -f "$CERT_FILE" ] || [ ! -f "$KEY_FILE" ]; then
+    fail "Certificate files not found:"
+    info "$CERT_FILE"
+    info "$KEY_FILE"
+    exit 1
+fi
 ok "SSL certificate ready."
 
 step "Downloading subscription template..."
@@ -112,9 +142,11 @@ update_env() {
 step "Writing .env settings..."
 update_env "UVICORN_HOST" "0.0.0.0"
 update_env "UVICORN_PORT" "8000"
-update_env "UVICORN_SSL_CERTFILE" "/var/lib/marzban/certs/$DOMAIN/fullchain.pem"
-update_env "UVICORN_SSL_KEYFILE" "/var/lib/marzban/certs/$DOMAIN/privkey.pem"
-update_env "SQLALCHEMY_DATABASE_URL" "postgresql+psycopg2://neondb_owner:npg_NsHrtyBdvc59@ep-green-pond-azvti84u-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
+update_env "UVICORN_SSL_CERTFILE" "$CERT_FILE"
+update_env "UVICORN_SSL_KEYFILE" "$KEY_FILE"
+# Neon PostgreSQL
+DB_URL="postgresql+psycopg2://neondb_owner:npg_NsHrtyBdvc59@ep-green-pond-azvti84u-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+update_env "SQLALCHEMY_DATABASE_URL" "$DB_URL"
 update_env "TELEGRAM_API_TOKEN" "$BOT_TOKEN"
 update_env "TELEGRAM_ADMIN_ID" "$ADMIN_ID"
 update_env "SUB_PROFILE_TITLE" "$SUB_TITLE"
@@ -169,8 +201,8 @@ sudo tee /var/lib/marzban/xray_config.json > /dev/null <<EOF
                 "network": "ws", "security": "tls",
                 "tlsSettings": {
                     "certificates": [{
-                        "certificateFile": "/var/lib/marzban/certs/$DOMAIN/fullchain.pem",
-                        "keyFile": "/var/lib/marzban/certs/$DOMAIN/privkey.pem"
+                        "certificateFile": "$CERT_FILE",
+                        "keyFile": "$KEY_FILE"
                     }]
                 },
                 "wsSettings": { "path": "/vless" }
@@ -204,8 +236,8 @@ sudo tee /var/lib/marzban/xray_config.json > /dev/null <<EOF
                 "network": "ws", "security": "tls",
                 "tlsSettings": {
                     "certificates": [{
-                        "certificateFile": "/var/lib/marzban/certs/$DOMAIN/fullchain.pem",
-                        "keyFile": "/var/lib/marzban/certs/$DOMAIN/privkey.pem"
+                        "certificateFile": "$CERT_FILE",
+                        "keyFile": "$KEY_FILE"
                     }]
                 },
                 "wsSettings": { "path": "/vmess" }
@@ -221,8 +253,8 @@ sudo tee /var/lib/marzban/xray_config.json > /dev/null <<EOF
                 "network": "tcp", "security": "tls",
                 "tlsSettings": {
                     "certificates": [{
-                        "certificateFile": "/var/lib/marzban/certs/$DOMAIN/fullchain.pem",
-                        "keyFile": "/var/lib/marzban/certs/$DOMAIN/privkey.pem"
+                        "certificateFile": "$CERT_FILE",
+                        "keyFile": "$KEY_FILE"
                     }]
                 }
             }
