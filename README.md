@@ -36,7 +36,7 @@ SSL၊ Telegram bot၊ subscription template နဲ့ protocol တွေပါ 
 ## ဘယ်လို run မလဲ
 
 ```bash
-bash <(curl -sL https://raw.githubusercontent.com/aungpaingsoedev/marzban-one-line-setup/main/marzban-one-line-setup.sh)
+bash <(curl -sL https://raw.githubusercontent.com/aungpaingsoedev/my-marzban-setup/main/marzban-one-line-setup.sh)
 ```
 
 သို့မဟုတ် local မှာ:
