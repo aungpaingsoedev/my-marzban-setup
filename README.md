@@ -57,12 +57,8 @@ sudo ./marzban-one-line-setup.sh
 5. Subscription title
 6. Admin username
 7. Admin password
-8. MySQL IP / Host
-9. MySQL database name
-10. MySQL username
-11. MySQL password
 
-> Port `3306` ကို အလိုအလျောက် သုံးပါတယ်။
+> MySQL က script ထဲမှာ သတ်မှတ်ထားပါတယ် (`130.94.42.207` / `marzban`).
 
 ## Install ပြီးရင်
 

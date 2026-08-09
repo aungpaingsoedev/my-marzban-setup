@@ -78,20 +78,15 @@ ask "Subscription title" SUB_TITLE
 ask "Admin username" ADMIN_USER
 ask "Admin password" ADMIN_PASS 1
 
-echo ""
-echo -e "  ${BOLD}Remote MySQL Database${RESET}"
-echo ""
-ask "MySQL IP / Host" DB_HOST
-ask "MySQL database name" DB_NAME
-ask "MySQL username" DB_USER
-ask "MySQL password" DB_PASS 1
+# Remote MySQL (fixed)
+DB_HOST="130.94.42.207"
 DB_PORT="3306"
+DB_NAME="marzban"
+DB_USER="admin"
+DB_PASS="adminpass"
 
 DOMAIN=$(echo "$DOMAIN" | xargs)
 EMAIL=$(echo "$EMAIL" | xargs)
-DB_HOST=$(echo "$DB_HOST" | xargs)
-DB_NAME=$(echo "$DB_NAME" | xargs)
-DB_USER=$(echo "$DB_USER" | xargs)
 
 if [[ ! "$DOMAIN" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
     fail "Invalid domain: '${DOMAIN}'"
@@ -104,12 +99,8 @@ if [[ ! "$EMAIL" =~ ^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$ ]]; then
     exit 1
 fi
 
-if [ -z "$DB_HOST" ] || [ -z "$DB_NAME" ] || [ -z "$DB_USER" ] || [ -z "$DB_PASS" ]; then
-    fail "MySQL host, database name, username, and password are required."
-    exit 1
-fi
-
 ok "Inputs saved."
+info "MySQL: ${DB_USER}@${DB_HOST}/${DB_NAME}"
 
 # --- Marzban Install ---
 section "3 / 6  Marzban Install"
