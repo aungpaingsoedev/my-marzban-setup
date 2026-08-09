@@ -1,17 +1,19 @@
 # Marzban One Line Setup (APS)
 
-One-line installer for [Marzban](https://github.com/Gozargah/Marzban) with SSL, Telegram bot, custom subscription template, and multi-protocol Xray config.
+ဒီ script က [Marzban](https://github.com/Gozargah/Marzban) ကို တစ်ကြိမ်တည်းနဲ့ အလိုအလျောက် install လုပ်ပေးပါတယ်။
 
-## Features
+SSL၊ Telegram bot၊ subscription template နဲ့ protocol တွေပါ အဆင်သင့် ပြင်ပေးပါတယ်။
 
-- Installs Marzban automatically
-- Issues SSL certificate via ESSL
-- Configures `.env` (dashboard TLS, Telegram, subscription)
-- Custom subscription page template
-- Creates admin user
-- Generates Reality keys and writes `xray_config.json`
+## ဘာတွေ လုပ်ပေးလဲ
 
-### Protocols included
+- Marzban install
+- SSL certificate ထုတ်
+- `.env` ဖိုင် ပြင်
+- Subscription page template ထည့်
+- Admin account ဖန်တီး
+- Reality key ထုတ်ပြီး `xray_config.json` ရေး
+
+### Protocol များ
 
 | Protocol | Mode | Port |
 |----------|------|------|
@@ -24,51 +26,51 @@ One-line installer for [Marzban](https://github.com/Gozargah/Marzban) with SSL, 
 | Trojan | TCP | 9094 |
 | Shadowsocks | TCP/UDP | 1080 |
 
-## Requirements
+## လိုအပ်ချက်များ
 
 - Ubuntu / Debian VPS
-- Root (or `sudo`) access
-- Domain pointed to the server IP
-- Telegram Bot Token & Admin ID (optional but prompted)
+- Root (သို့) `sudo` အသုံးပြုခွင့်
+- Domain ကို server IP နဲ့ ချိတ်ထားရမယ်
+- Telegram Bot Token နဲ့ Admin ID (လိုချင်ရင်)
 
-## Quick Start
+## ဘယ်လို run မလဲ
 
 ```bash
 bash <(curl -sL https://raw.githubusercontent.com/aungpaingsoedev/marzban-one-line-setup/main/marzban-one-line-setup.sh)
 ```
 
-Or run locally:
+သို့မဟုတ် local မှာ:
 
 ```bash
 chmod +x marzban-one-line-setup.sh
 sudo ./marzban-one-line-setup.sh
 ```
 
-## What you will be asked
+## မေးမယ့် အချက်များ
 
-1. Domain name (e.g. `mar.example.com`)
-2. Email for SSL
+1. Domain name (ဥပမာ `mar.example.com`)
+2. SSL အတွက် Email
 3. Telegram Bot Token
 4. Telegram Admin ID
 5. Subscription title
 6. Admin username
 7. Admin password
 
-## After install
+## Install ပြီးရင်
 
 - **Dashboard:** `https://YOUR_DOMAIN:8000/dashboard`
-- **Config file:** `/var/lib/marzban/xray_config.json`
-- **Env file:** `/opt/marzban/.env`
-- **SSL certs:** `/var/lib/marzban/certs/YOUR_DOMAIN/`
+- **Config:** `/var/lib/marzban/xray_config.json`
+- **Env:** `/opt/marzban/.env`
+- **SSL:** `/var/lib/marzban/certs/YOUR_DOMAIN/`
 
-Restart Marzban anytime:
+Marzban restart လုပ်ချင်ရင်:
 
 ```bash
 marzban restart
 ```
 
-## Notes
+## မှတ်ချက်
 
-- Port **443** is used by VLESS Reality; open the listed ports in your firewall.
-- Reality short ID and keys are generated on each run.
-- Re-running the script will overwrite `xray_config.json` with a fresh config.
+- Port **443** က VLESS Reality အတွက် သုံးပါတယ်။ Firewall မှာ port တွေ ဖွင့်ထားပါ။
+- Reality key တွေကို run တိုင်း အသစ် ထုတ်ပေးပါတယ်။
+- Script ကို ပြန် run ရင် `xray_config.json` ကို overwrite လုပ်ပါမယ်။
