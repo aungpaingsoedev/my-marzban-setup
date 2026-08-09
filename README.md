@@ -2,13 +2,14 @@
 
 ဒီ script က [Marzban](https://github.com/Gozargah/Marzban) ကို တစ်ကြိမ်တည်းနဲ့ အလိုအလျောက် install လုပ်ပေးပါတယ်။
 
-SSL၊ Telegram bot၊ subscription template နဲ့ protocol တွေပါ အဆင်သင့် ပြင်ပေးပါတယ်။
+SSL၊ Telegram bot၊ subscription template၊ protocol တွေနဲ့ **remote MySQL** ပါ အဆင်သင့် ပြင်ပေးပါတယ်။
 
 ## ဘာတွေ လုပ်ပေးလဲ
 
 - Marzban install
 - SSL certificate ထုတ်
 - `.env` ဖိုင် ပြင်
+- Remote MySQL database ချိတ်
 - Subscription page template ထည့်
 - Admin account ဖန်တီး
 - Reality key ထုတ်ပြီး `xray_config.json` ရေး
@@ -31,6 +32,7 @@ SSL၊ Telegram bot၊ subscription template နဲ့ protocol တွေပါ 
 - Ubuntu / Debian VPS
 - Root (သို့) `sudo` အသုံးပြုခွင့်
 - Domain ကို server IP နဲ့ ချိတ်ထားရမယ်
+- တခြား server ပေါ်က MySQL (remote access ဖွင့်ထားရမယ်)
 - Telegram Bot Token နဲ့ Admin ID (လိုချင်ရင်)
 
 ## ဘယ်လို run မလဲ
@@ -55,6 +57,11 @@ sudo ./marzban-one-line-setup.sh
 5. Subscription title
 6. Admin username
 7. Admin password
+8. MySQL IP / Host
+9. MySQL username
+10. MySQL password
+
+> Port `3306` နဲ့ database name `marzban` ကို အလိုအလျောက် သုံးပါတယ်။
 
 ## Install ပြီးရင်
 
@@ -72,5 +79,6 @@ marzban restart
 ## မှတ်ချက်
 
 - Port **443** က VLESS Reality အတွက် သုံးပါတယ်။ Firewall မှာ port တွေ ဖွင့်ထားပါ။
+- MySQL server မှာ Marzban VPS IP ကနေ remote connect ခွင့်ပြုထားရမယ်။
 - Reality key တွေကို run တိုင်း အသစ် ထုတ်ပေးပါတယ်။
 - Script ကို ပြန် run ရင် `xray_config.json` ကို overwrite လုပ်ပါမယ်။

@@ -51,7 +51,7 @@ echo "      ██║  ██║██║     ███████║"
 echo "      ╚═╝  ╚═╝╚═╝     ╚══════╝"
 echo -e "${RESET}"
 echo -e "         ${BOLD}Marzban One Line Setup${RESET}"
-echo -e "         ${DIM}Automated install · SSL · Protocols${RESET}"
+echo -e "         ${DIM}Automated install · SSL · Protocols · MySQL${RESET}"
 line
 echo -e "  ${BOLD}Protocols${RESET}"
 echo -e "  ${DIM}•${RESET} VLESS   Reality · WS TLS · TCP"
@@ -63,7 +63,7 @@ line
 # --- Packages ---
 section "1 / 6  Dependencies"
 step "Updating packages and installing dependencies..."
-sudo apt update && sudo apt install -y curl socat wget sed unzip
+sudo apt update && sudo apt install -y curl socat wget sed unzip python3
 ok "Dependencies ready."
 
 # --- Inputs ---
@@ -78,8 +78,19 @@ ask "Subscription title" SUB_TITLE
 ask "Admin username" ADMIN_USER
 ask "Admin password" ADMIN_PASS 1
 
+echo ""
+echo -e "  ${BOLD}Remote MySQL Database${RESET}"
+echo ""
+ask "MySQL IP / Host" DB_HOST
+ask "MySQL username" DB_USER
+ask "MySQL password" DB_PASS 1
+DB_PORT="3306"
+DB_NAME="marzban"
+
 DOMAIN=$(echo "$DOMAIN" | xargs)
 EMAIL=$(echo "$EMAIL" | xargs)
+DB_HOST=$(echo "$DB_HOST" | xargs)
+DB_USER=$(echo "$DB_USER" | xargs)
 
 if [[ ! "$DOMAIN" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
     fail "Invalid domain: '${DOMAIN}'"
@@ -92,6 +103,11 @@ if [[ ! "$EMAIL" =~ ^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$ ]]; then
     exit 1
 fi
 
+if [ -z "$DB_HOST" ] || [ -z "$DB_USER" ] || [ -z "$DB_PASS" ]; then
+    fail "MySQL host, username, and password are required."
+    exit 1
+fi
+
 ok "Inputs saved."
 
 # --- Marzban Install ---
@@ -99,6 +115,21 @@ section "3 / 6  Marzban Install"
 step "Installing Marzban..."
 sudo bash -c "$(curl -sL https://github.com/Gozargah/Marzban-scripts/raw/master/marzban.sh)" @ install
 ok "Marzban installed."
+
+# Restore official image (remove any Neon custom build leftovers)
+step "Restoring official Marzban Docker image..."
+sudo rm -f /opt/marzban/Dockerfile
+sudo tee /opt/marzban/docker-compose.yml > /dev/null <<'COMPOSE'
+services:
+  marzban:
+    image: gozargah/marzban:latest
+    restart: always
+    env_file: .env
+    network_mode: host
+    volumes:
+      - /var/lib/marzban:/var/lib/marzban
+COMPOSE
+ok "Official Docker Compose ready."
 
 CERT_DIR="/var/lib/marzban/certs/${DOMAIN}"
 CERT_FILE="${CERT_DIR}/fullchain.pem"
@@ -139,13 +170,15 @@ update_env() {
     fi
 }
 
+# URL-encode MySQL password
+DB_PASS_ENC=$(printf '%s' "$DB_PASS" | python3 -c "import sys, urllib.parse; print(urllib.parse.quote(sys.stdin.read(), safe=''))")
+DB_URL="mysql+pymysql://${DB_USER}:${DB_PASS_ENC}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+
 step "Writing .env settings..."
 update_env "UVICORN_HOST" "0.0.0.0"
 update_env "UVICORN_PORT" "8000"
 update_env "UVICORN_SSL_CERTFILE" "$CERT_FILE"
 update_env "UVICORN_SSL_KEYFILE" "$KEY_FILE"
-# Neon PostgreSQL (sslmode only — channel_binding breaks with psycopg2)
-DB_URL="postgresql+psycopg2://neondb_owner:npg_NsHrtyBdvc59@ep-green-pond-azvti84u-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
 update_env "SQLALCHEMY_DATABASE_URL" "$DB_URL"
 update_env "TELEGRAM_API_TOKEN" "$BOT_TOKEN"
 update_env "TELEGRAM_ADMIN_ID" "$ADMIN_ID"
@@ -154,34 +187,9 @@ update_env "XRAY_SUBSCRIPTION_URL_PREFIX" "https://$DOMAIN:8000"
 update_env "CUSTOM_TEMPLATES_DIRECTORY" "/var/lib/marzban/templates/"
 update_env "SUBSCRIPTION_PAGE_TEMPLATE" "subscription/index.html"
 
-# Remove any old typo entries
+# Remove any old typo / Neon leftovers
 sudo sed -i "/^UNICORN_SSL_/d" "$ENV_FILE"
-ok ".env updated."
-
-# Official Marzban image has no psycopg2 — build a custom image that includes it
-step "Building Marzban image with PostgreSQL driver..."
-sudo tee /opt/marzban/Dockerfile > /dev/null <<'DOCKERFILE'
-FROM gozargah/marzban:latest
-USER root
-RUN pip install --no-cache-dir psycopg2-binary
-DOCKERFILE
-
-sudo tee /opt/marzban/docker-compose.yml > /dev/null <<'COMPOSE'
-services:
-  marzban:
-    build: .
-    image: marzban-neon:local
-    restart: always
-    env_file: .env
-    network_mode: host
-    volumes:
-      - /var/lib/marzban:/var/lib/marzban
-COMPOSE
-
-cd /opt/marzban
-sudo docker compose build --no-cache
-sudo docker compose up -d --force-recreate
-ok "Marzban image ready with psycopg2."
+ok ".env updated (remote MySQL)."
 
 # --- Protocols ---
 section "5 / 6  Protocols"
@@ -331,7 +339,6 @@ ok "Protocol config written."
 section "6 / 6  Finalize"
 step "Restarting Marzban..."
 cd /opt/marzban && sudo docker compose up -d --force-recreate
-# Fallback if compose alias differs
 marzban restart 2>/dev/null || true
 
 # Cleanup
@@ -353,6 +360,7 @@ echo -e "${GREEN}${BOLD}  Setup complete${RESET}"
 line
 echo -e "  ${BOLD}Dashboard${RESET}  https://${DOMAIN}:8000/dashboard"
 echo -e "  ${BOLD}Username${RESET}   ${ADMIN_USER}"
+echo -e "  ${BOLD}Database${RESET}  ${DB_HOST}"
 echo -e "  ${BOLD}Config${RESET}     /var/lib/marzban/xray_config.json"
 line
 echo -e "  ${DIM}Open the dashboard and add your users.${RESET}"
