@@ -144,8 +144,8 @@ update_env "UVICORN_HOST" "0.0.0.0"
 update_env "UVICORN_PORT" "8000"
 update_env "UVICORN_SSL_CERTFILE" "$CERT_FILE"
 update_env "UVICORN_SSL_KEYFILE" "$KEY_FILE"
-# Neon PostgreSQL
-DB_URL="postgresql+psycopg2://neondb_owner:npg_NsHrtyBdvc59@ep-green-pond-azvti84u-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+# Neon PostgreSQL (sslmode only — channel_binding breaks with psycopg2)
+DB_URL="postgresql+psycopg2://neondb_owner:npg_NsHrtyBdvc59@ep-green-pond-azvti84u-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
 update_env "SQLALCHEMY_DATABASE_URL" "$DB_URL"
 update_env "TELEGRAM_API_TOKEN" "$BOT_TOKEN"
 update_env "TELEGRAM_ADMIN_ID" "$ADMIN_ID"
@@ -157,6 +157,22 @@ update_env "SUBSCRIPTION_PAGE_TEMPLATE" "subscription/index.html"
 # Remove any old typo entries
 sudo sed -i "/^UNICORN_SSL_/d" "$ENV_FILE"
 ok ".env updated."
+
+# Official Marzban image has no psycopg2 — install it on container start
+step "Enabling PostgreSQL driver (psycopg2) in Docker..."
+COMPOSE_FILE="/opt/marzban/docker-compose.yml"
+sudo tee "$COMPOSE_FILE" > /dev/null <<'COMPOSE'
+services:
+  marzban:
+    image: gozargah/marzban:latest
+    restart: always
+    env_file: .env
+    network_mode: host
+    volumes:
+      - /var/lib/marzban:/var/lib/marzban
+    command: bash -c "pip install --no-cache-dir psycopg2-binary && alembic upgrade head; python main.py"
+COMPOSE
+ok "Docker Compose updated for Neon PostgreSQL."
 
 # --- Protocols ---
 section "5 / 6  Protocols"
