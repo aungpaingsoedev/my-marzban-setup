@@ -158,21 +158,30 @@ update_env "SUBSCRIPTION_PAGE_TEMPLATE" "subscription/index.html"
 sudo sed -i "/^UNICORN_SSL_/d" "$ENV_FILE"
 ok ".env updated."
 
-# Official Marzban image has no psycopg2 — install it on container start
-step "Enabling PostgreSQL driver (psycopg2) in Docker..."
-COMPOSE_FILE="/opt/marzban/docker-compose.yml"
-sudo tee "$COMPOSE_FILE" > /dev/null <<'COMPOSE'
+# Official Marzban image has no psycopg2 — build a custom image that includes it
+step "Building Marzban image with PostgreSQL driver..."
+sudo tee /opt/marzban/Dockerfile > /dev/null <<'DOCKERFILE'
+FROM gozargah/marzban:latest
+USER root
+RUN pip install --no-cache-dir psycopg2-binary
+DOCKERFILE
+
+sudo tee /opt/marzban/docker-compose.yml > /dev/null <<'COMPOSE'
 services:
   marzban:
-    image: gozargah/marzban:latest
+    build: .
+    image: marzban-neon:local
     restart: always
     env_file: .env
     network_mode: host
     volumes:
       - /var/lib/marzban:/var/lib/marzban
-    command: bash -c "pip install --no-cache-dir psycopg2-binary && alembic upgrade head; python main.py"
 COMPOSE
-ok "Docker Compose updated for Neon PostgreSQL."
+
+cd /opt/marzban
+sudo docker compose build --no-cache
+sudo docker compose up -d --force-recreate
+ok "Marzban image ready with psycopg2."
 
 # --- Protocols ---
 section "5 / 6  Protocols"
@@ -321,7 +330,9 @@ ok "Protocol config written."
 # --- Finish ---
 section "6 / 6  Finalize"
 step "Restarting Marzban..."
-marzban restart
+cd /opt/marzban && sudo docker compose up -d --force-recreate
+# Fallback if compose alias differs
+marzban restart 2>/dev/null || true
 
 # Cleanup
 rm -rf /tmp/xray.zip /tmp/xray 2>/dev/null
