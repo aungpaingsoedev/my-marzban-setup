@@ -3,49 +3,100 @@
 # Clear screen
 clear
 
-# --- Banner Section ---
-echo -e "\e[1;36m"
+# --- Colors & UI Helpers ---
+CYAN="\e[1;36m"
+GREEN="\e[1;32m"
+YELLOW="\e[1;33m"
+RED="\e[1;31m"
+BOLD="\e[1m"
+DIM="\e[2m"
+RESET="\e[0m"
+
+line() {
+    echo -e "${DIM}────────────────────────────────────────────────────────${RESET}"
+}
+
+section() {
+    echo ""
+    line
+    echo -e "${CYAN}  $1${RESET}"
+    line
+}
+
+info()    { echo -e "${CYAN}›${RESET} $1"; }
+ok()      { echo -e "${GREEN}✓${RESET} $1"; }
+warn()    { echo -e "${YELLOW}!${RESET} $1"; }
+fail()    { echo -e "${RED}✗${RESET} $1"; }
+step()    { echo -e "${BOLD}→${RESET} $1"; }
+
+ask() {
+    local prompt="$1"
+    local var="$2"
+    local secret="${3:-0}"
+    if [ "$secret" = "1" ]; then
+        read -s -p "$(echo -e "${YELLOW}?${RESET} ${prompt}: ")" "$var"
+        echo ""
+    else
+        read -p "$(echo -e "${YELLOW}?${RESET} ${prompt}: ")" "$var"
+    fi
+}
+
+# --- Banner ---
+echo -e "${CYAN}"
 echo "       █████╗ ██████╗ ███████╗"
 echo "      ██╔══██╗██╔══██╗██╔════╝"
 echo "      ███████║██████╔╝███████╗"
 echo "      ██╔══██║██╔═══╝ ╚════██║"
 echo "      ██║  ██║██║     ███████║"
 echo "      ╚═╝  ╚═╝╚═╝     ╚══════╝"
-echo -e "\e[0m"
-echo "           Marzban One Line Setup"
-echo "--------------------------------------------------"
-echo -e "\e[1;33m  Installing Protocols:\e[0m"
-echo "  🔹 VLESS (Reality & WS TLS)"
-echo "  🔹 VMess (WS TLS & TCP)"
-echo "  🔹 Trojan (TLS & TCP)"
-echo "  🔹 Shadowsocks"
-echo "--------------------------------------------------"
+echo -e "${RESET}"
+echo -e "         ${BOLD}Marzban One Line Setup${RESET}"
+echo -e "         ${DIM}Automated install · SSL · Protocols${RESET}"
+line
+echo -e "  ${BOLD}Protocols${RESET}"
+echo -e "  ${DIM}•${RESET} VLESS   Reality · WS TLS · TCP"
+echo -e "  ${DIM}•${RESET} VMess   WS TLS · TCP"
+echo -e "  ${DIM}•${RESET} Trojan  TLS · TCP"
+echo -e "  ${DIM}•${RESET} Shadowsocks  TCP/UDP"
+line
 
-# Necessary Package Check
-echo "📦 Checking necessary packages..."
+# --- Packages ---
+section "1 / 6  Dependencies"
+step "Updating packages and installing dependencies..."
 sudo apt update && sudo apt install -y curl socat wget sed unzip
+ok "Dependencies ready."
 
-# Inputs
-read -p "Enter Domain Name (e.g., mar.example.com): " DOMAIN
-read -p "Enter Email for SSL: " EMAIL
-read -p "Enter Telegram Bot Token: " BOT_TOKEN
-read -p "Enter Telegram Admin ID: " ADMIN_ID
-read -p "Enter Subscription Title: " SUB_TITLE
-read -p "Create Admin Username: " ADMIN_USER
-read -s -p "Create Admin Password: " ADMIN_PASS
-echo -e "\n--------------------------------------------------"
+# --- Inputs ---
+section "2 / 6  Configuration"
+echo -e "  ${DIM}Enter the details below to continue.${RESET}"
+echo ""
+ask "Domain name (e.g. mar.example.com)" DOMAIN
+ask "Email for SSL certificate" EMAIL
+ask "Telegram bot token" BOT_TOKEN
+ask "Telegram admin ID" ADMIN_ID
+ask "Subscription title" SUB_TITLE
+ask "Admin username" ADMIN_USER
+ask "Admin password" ADMIN_PASS 1
+ok "Inputs saved."
 
-echo "🚀 Installing Marzban..."
+# --- Marzban Install ---
+section "3 / 6  Marzban Install"
+step "Installing Marzban..."
 sudo bash -c "$(curl -sL https://github.com/Gozargah/Marzban-scripts/raw/master/marzban.sh)" @ install
+ok "Marzban installed."
 
-echo "🔐 Generating SSL Certificates..."
+step "Issuing SSL certificate for ${BOLD}${DOMAIN}${RESET}..."
 sudo bash -c "$(curl -sL https://raw.githubusercontent.com/erfjab/ESSL/master/essl.sh)" @ --install
 sudo essl "$EMAIL" "$DOMAIN" marzban
+ok "SSL certificate ready."
 
-echo "🎨 Setting up Custom Template..."
+step "Downloading subscription template..."
 sudo mkdir -p /var/lib/marzban/templates/subscription/
 sudo wget -N -P /var/lib/marzban/templates/subscription/ https://raw.githubusercontent.com/yannaing86tt/template/main/subscription/index.html
+ok "Template installed."
 
+# --- Env ---
+section "4 / 6  Environment"
 ENV_FILE="/opt/marzban/.env"
 
 update_env() {
@@ -58,7 +109,7 @@ update_env() {
     fi
 }
 
-echo "📝 Updating .env configuration..."
+step "Writing .env settings..."
 update_env "UVICORN_HOST" "0.0.0.0"
 update_env "UVICORN_PORT" "8000"
 update_env "UVICORN_SSL_CERTFILE" "/var/lib/marzban/certs/$DOMAIN/fullchain.pem"
@@ -72,14 +123,16 @@ update_env "SUBSCRIPTION_PAGE_TEMPLATE" "subscription/index.html"
 
 # Remove any old typo entries
 sudo sed -i "/^UNICORN_SSL_/d" "$ENV_FILE"
+ok ".env updated."
 
-echo "🔑 Reality Keys ထုတ်နေပါတယ်..."
+# --- Protocols ---
+section "5 / 6  Protocols"
+step "Generating Reality keys..."
 
-# --- Get Reality Keys ---
 KEYS=$(docker exec marzban-marzban-1 xray x25519 2>/dev/null || docker exec marzban-1 xray x25519 2>/dev/null)
 
 if [ -z "$KEYS" ]; then
-    echo "🌐 Docker ထဲမှာ xray မရှိလို့ အပြင်ကနေ Download ဆွဲနေပါတယ်..."
+    warn "xray not found in Docker — downloading binary..."
     curl -L -o /tmp/xray.zip https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-64.zip &>/dev/null
     unzip -o /tmp/xray.zip xray -d /tmp/ &>/dev/null
     chmod +x /tmp/xray
@@ -91,14 +144,13 @@ PUB=$(echo "$KEYS" | grep "Public key" | cut -d ' ' -f 3)
 SID=$(openssl rand -hex 4)
 
 if [ -z "$PRIV" ]; then
-    echo -e "\e[1;31m❌ Error: Reality Keys ထုတ်လို့ မရခဲ့ပါ။\e[0m"
+    fail "Could not generate Reality keys."
     exit 1
 fi
 
-echo -e "\e[1;32m✅ Keys Generated Successfully.\e[0m"
+ok "Reality keys generated."
 
-# --- Create xray_config.json ---
-echo "📡 Configuring protocols..."
+step "Writing xray_config.json..."
 sudo tee /var/lib/marzban/xray_config.json > /dev/null <<EOF
 {
     "log": { "loglevel": "warning" },
@@ -215,10 +267,11 @@ sudo tee /var/lib/marzban/xray_config.json > /dev/null <<EOF
     ]
 }
 EOF
+ok "Protocol config written."
 
-echo "✅ JSON File Updated."
-
-echo "🔄 Restarting Marzban to apply changes..."
+# --- Finish ---
+section "6 / 6  Finalize"
+step "Restarting Marzban..."
 marzban restart
 
 # Cleanup
@@ -227,12 +280,20 @@ rm -rf /tmp/xray.zip /tmp/xray 2>/dev/null
 # Wait for Marzban to wake up before creating admin
 sleep 5
 
-echo "👤 Creating Admin User..."
-marzban cli admin create --username "$ADMIN_USER" --password "$ADMIN_PASS" --sudo || echo "Admin setup skipped."
+step "Creating admin user..."
+if marzban cli admin create --username "$ADMIN_USER" --password "$ADMIN_PASS" --sudo; then
+    ok "Admin user created."
+else
+    warn "Admin setup skipped (may already exist)."
+fi
 
-echo "--------------------------------------------------"
-echo -e "\e[1;32m🔥 Protocols Configuration Complete! 🔥\e[0m"
-echo -e "\e[1;32m✅ Installation Completed Successfully!\e[0m"
-echo "🌐 Dashboard: https://$DOMAIN:8000/dashboard"
-echo "👤 Username: $ADMIN_USER"
-echo "--------------------------------------------------"
+echo ""
+line
+echo -e "${GREEN}${BOLD}  Setup complete${RESET}"
+line
+echo -e "  ${BOLD}Dashboard${RESET}  https://${DOMAIN}:8000/dashboard"
+echo -e "  ${BOLD}Username${RESET}   ${ADMIN_USER}"
+echo -e "  ${BOLD}Config${RESET}     /var/lib/marzban/xray_config.json"
+line
+echo -e "  ${DIM}Open the dashboard and add your users.${RESET}"
+echo ""
