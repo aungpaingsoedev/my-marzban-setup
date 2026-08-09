@@ -82,14 +82,15 @@ echo ""
 echo -e "  ${BOLD}Remote MySQL Database${RESET}"
 echo ""
 ask "MySQL IP / Host" DB_HOST
+ask "MySQL database name" DB_NAME
 ask "MySQL username" DB_USER
 ask "MySQL password" DB_PASS 1
 DB_PORT="3306"
-DB_NAME="marzban"
 
 DOMAIN=$(echo "$DOMAIN" | xargs)
 EMAIL=$(echo "$EMAIL" | xargs)
 DB_HOST=$(echo "$DB_HOST" | xargs)
+DB_NAME=$(echo "$DB_NAME" | xargs)
 DB_USER=$(echo "$DB_USER" | xargs)
 
 if [[ ! "$DOMAIN" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
@@ -103,8 +104,8 @@ if [[ ! "$EMAIL" =~ ^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$ ]]; then
     exit 1
 fi
 
-if [ -z "$DB_HOST" ] || [ -z "$DB_USER" ] || [ -z "$DB_PASS" ]; then
-    fail "MySQL host, username, and password are required."
+if [ -z "$DB_HOST" ] || [ -z "$DB_NAME" ] || [ -z "$DB_USER" ] || [ -z "$DB_PASS" ]; then
+    fail "MySQL host, database name, username, and password are required."
     exit 1
 fi
 
