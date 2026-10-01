@@ -43,20 +43,20 @@ ask() {
 
 # --- Banner ---
 echo -e "${CYAN}"
-echo "       █████╗ ██████╗ ███████╗"
-echo "      ██╔══██╗██╔══██╗██╔════╝"
-echo "      ███████║██████╔╝███████╗"
-echo "      ██╔══██║██╔═══╝ ╚════██║"
-echo "      ██║  ██║██║     ███████║"
-echo "      ╚═╝  ╚═╝╚═╝     ╚══════╝"
+echo "        █████╗ ██████╗ ███████╗"
+echo "       ██╔══██╗██╔══██╗██╔════╝"
+echo "       ███████║██████╔╝███████╗"
+echo "       ██╔══██║██╔═══╝ ╚════██║"
+echo "       ██║  ██║██║     ███████║"
+echo "       ╚═╝  ╚═╝╚═╝     ╚══════╝"
 echo -e "${RESET}"
-echo -e "         ${BOLD}Marzban One Line Setup${RESET}"
-echo -e "         ${DIM}Automated install · SSL · Protocols · MySQL${RESET}"
+echo -e "          ${BOLD}Marzban One Line Setup${RESET}"
+echo -e "          ${DIM}Automated install · SSL · Protocols · MySQL${RESET}"
 line
 echo -e "  ${BOLD}Protocols${RESET}"
-echo -e "  ${DIM}•${RESET} VLESS   Reality · WS TLS · TCP"
-echo -e "  ${DIM}•${RESET} VMess   WS TLS · TCP"
-echo -e "  ${DIM}•${RESET} Trojan  TLS · TCP"
+echo -e "  ${DIM}•${RESET} VLESS    Reality · WS TLS · TCP"
+echo -e "  ${DIM}•${RESET} VMess    WS TLS · TCP"
+echo -e "  ${DIM}•${RESET} Trojan   TLS · TCP"
 echo -e "  ${DIM}•${RESET} Shadowsocks  TCP/UDP"
 line
 
@@ -108,7 +108,7 @@ step "Installing Marzban..."
 sudo bash -c "$(curl -sL https://github.com/Gozargah/Marzban-scripts/raw/master/marzban.sh)" @ install
 ok "Marzban installed."
 
-# Restore official image (remove any Neon custom build leftovers)
+# Restore official image
 step "Restoring official Marzban Docker image..."
 sudo rm -f /opt/marzban/Dockerfile
 sudo tee /opt/marzban/docker-compose.yml > /dev/null <<'COMPOSE'
@@ -123,25 +123,28 @@ services:
 COMPOSE
 ok "Official Docker Compose ready."
 
-CERT_DIR="/var/lib/marzban/certs/${DOMAIN}"
+CERT_DIR="/var/lib/marzban/certs"
 CERT_FILE="${CERT_DIR}/fullchain.pem"
 KEY_FILE="${CERT_DIR}/privkey.pem"
+sudo mkdir -p "$CERT_DIR"
 
-step "Issuing SSL certificate for ${BOLD}${DOMAIN}${RESET}..."
-sudo bash -c "$(curl -sL https://raw.githubusercontent.com/erfjab/ESSL/master/essl.sh)" @ --install
-if ! sudo essl "$EMAIL" "$DOMAIN" marzban; then
+step "Issuing SSL certificate via acme.sh for ${BOLD}${DOMAIN}${RESET}..."
+
+# Install acme.sh
+curl https://get.acme.sh | sh -s email="$EMAIL" &>/dev/null
+~/.acme.sh/acme.sh --set-default-ca --server letsencrypt &>/dev/null
+
+# Issue Certificate
+if ~/.acme.sh/acme.sh --issue -d "$DOMAIN" --standalone; then
+    ~/.acme.sh/acme.sh --install-cert -d "$DOMAIN" \
+        --fullchain-file "$CERT_FILE" \
+        --key-file "$KEY_FILE"
+    ok "SSL certificate issued successfully."
+else
     fail "SSL certificate failed for ${DOMAIN}."
-    fail "Check DNS A record points to this server, then try again."
+    fail "Ensure Port 80 is open and DNS A Record points correctly to this server IP."
     exit 1
 fi
-
-if [ ! -f "$CERT_FILE" ] || [ ! -f "$KEY_FILE" ]; then
-    fail "Certificate files not found:"
-    info "$CERT_FILE"
-    info "$KEY_FILE"
-    exit 1
-fi
-ok "SSL certificate ready."
 
 step "Downloading subscription template..."
 sudo mkdir -p /var/lib/marzban/templates/subscription/
@@ -179,7 +182,7 @@ update_env "XRAY_SUBSCRIPTION_URL_PREFIX" "https://$DOMAIN:8000"
 update_env "CUSTOM_TEMPLATES_DIRECTORY" "/var/lib/marzban/templates/"
 update_env "SUBSCRIPTION_PAGE_TEMPLATE" "subscription/index.html"
 
-# Remove any old typo / Neon leftovers
+# Remove any old typo leftovers
 sudo sed -i "/^UNICORN_SSL_/d" "$ENV_FILE"
 ok ".env updated (remote MySQL)."
 
@@ -243,7 +246,7 @@ sudo tee /var/lib/marzban/xray_config.json > /dev/null <<EOF
                 "network": "tcp", "security": "reality",
                 "realitySettings": {
                     "show": false, "dest": "www.cloudflare.com:443", "xver": 0,
-                    "serverNames": ["www.cloudflare.com", "$DOMAIN"],
+                    "serverNames": ["www.cloudflare.com"],
                     "privateKey": "$PRIV",
                     "publicKey": "$PUB",
                     "shortIds": ["$SID"]
@@ -336,7 +339,6 @@ marzban restart 2>/dev/null || true
 # Cleanup
 rm -rf /tmp/xray.zip /tmp/xray 2>/dev/null
 
-# Wait for Marzban to wake up before creating admin
 sleep 5
 
 step "Creating admin user..."
